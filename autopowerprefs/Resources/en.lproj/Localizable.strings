@@ -1,0 +1,18 @@
+"plugin.title" = "AutoPower";
+"plugin.enabled" = "Enable AutoPower";
+"plugin.ignoreUser" = "Ignore user-triggered low power mode";
+"plugin.ignoreUserFooter" = "Low power mode enabled by the user is preserved.";
+"trigger.group" = "Trigger Mode";
+"trigger.exclusiveFooter" = "Screen-off and locked modes are mutually exclusive.";
+"trigger.locked" = "Locked mode (low power while locked)";
+"trigger.screenOff" = "Screen-off mode (low power while off)";
+"diagnostics.group" = "Diagnostics";
+"diagnostics.logEnabled" = "Record runtime logs";
+"diagnostics.viewLog" = "View runtime logs";
+"diagnostics.reset" = "Reset plugin state";
+"diagnostics.logFooter" = "Log file: /var/mobile/Library/Preferences/autopower.log";
+/* 日志视图 */
+"log.title" = "AutoPower Log";
+"log.clear" = "Clear";
+"log.disabledHint" = "(Log recording is disabled)\n\nEnable \"Record runtime logs\" in AutoPower settings, then re-enter this page to view.";
+"log.empty" = "(No logs yet)";

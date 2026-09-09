@@ -1,0 +1,18 @@
+"plugin.title" = "AutoPower";
+"plugin.enabled" = "启用 AutoPower";
+"plugin.ignoreUser" = "忽略用户触发的低电量模式自动切换";
+"plugin.ignoreUserFooter" = "开启后，手动开启的低电量模式在熄屏再亮屏时不会被自动关闭。";
+"trigger.group" = "触发模式";
+"trigger.exclusiveFooter" = "熄屏模式与锁屏模式二选一";
+"trigger.locked" = "锁屏模式（锁定开省电，解锁关省电）";
+"trigger.screenOff" = "熄屏模式（熄屏开省电，亮屏关省电）";
+"diagnostics.group" = "诊断";
+"diagnostics.logEnabled" = "记录运行日志";
+"diagnostics.viewLog" = "查看运行日志";
+"diagnostics.reset" = "重置插件状态";
+"diagnostics.logFooter" = "日志写入 /var/mobile/Library/Preferences/autopower.log。";
+/* 日志视图 */
+"log.title" = "AutoPower 日志";
+"log.clear" = "清空";
+"log.disabledHint" = "（日志记录已关闭）\n\n请开启「记录运行日志」，再重新进入本页面查看。";
+"log.empty" = "（暂无日志）";

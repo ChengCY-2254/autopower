@@ -1,0 +1,97 @@
+name: Build Tweak
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Homebrew
+        run: |
+          brew update
+          brew tap theos/theos
+
+      - name: Install Theos dependencies
+        run: |
+          brew install make ldid xz
+          # Install Theos
+          git clone --depth=1 https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos-build
+          export THEOS=$GITHUB_WORKSPACE/theos-build
+
+      - name: Download and setup Theos
+        run: |
+          export THEOS=$GITHUB_WORKSPACE/theos-build
+          # Download SDKs
+          mkdir -p $THEOS/sdks
+          cd $THEOS/sdks
+          # iOS SDK
+          curl -fsSL https://github.com/theos/sdks/releases/download/sdks/iPhoneOS14.4.sdk.tar.gz -O
+          tar xzf iPhoneOS14.4.sdk.tar.gz
+          rm iPhoneOS14.4.sdk.tar.gz
+
+      - name: Prepare build environment
+        run: |
+          export THEOS=$GITHUB_WORKSPACE/theos-build
+          mkdir -p $GITHUB_WORKSPACE/debs
+
+      - name: Build Release Package
+        run: |
+          export THEOS=$GITHUB_WORKSPACE/theos-build
+          cd $GITHUB_WORKSPACE
+          make clean
+          make package FINALPACKAGE=1 _THEOS_DEB_PACKAGE_CONTROL_PATH=$GITHUB_WORKSPACE/control.release
+          if [ -f .theos/last_package ]; then
+            deb_file=$(<.theos/last_package)
+            [ ! -f "$deb_file" ] && deb_file="$GITHUB_WORKSPACE/$deb_file"
+            [ -f "$deb_file" ] && mv "$deb_file" $GITHUB_WORKSPACE/debs/
+          fi
+
+      - name: Build Debug Package
+        run: |
+          export THEOS=$GITHUB_WORKSPACE/theos-build
+          cd $GITHUB_WORKSPACE
+          make clean
+          make package _THEOS_DEB_PACKAGE_CONTROL_PATH=$GITHUB_WORKSPACE/control.debug
+          if [ -f .theos/last_package ]; then
+            deb_file=$(<.theos/last_package)
+            [ ! -f "$deb_file" ] && deb_file="$GITHUB_WORKSPACE/$deb_file"
+            [ -f "$deb_file" ] && mv "$deb_file" $GITHUB_WORKSPACE/debs/
+          fi
+
+      - name: List build artifacts
+        run: |
+          ls -lh $GITHUB_WORKSPACE/debs/
+          echo "---"
+          echo "构建产物:"
+          find $GITHUB_WORKSPACE/debs -type f -name "*.deb" | while read f; do
+            echo "  $(basename "$f") - $(stat -f%z "$f" | awk '{print $1/1024/1024 "MB"}')"
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: autopower-debs
+          path: debs/*.deb
+          retention-days: 30
+
+      - name: Create Release (on tag)
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: debs/*.deb
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
