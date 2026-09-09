@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      THEOS: ${{ github.workspace }}/theos
     
     steps:
       - name: Checkout repository
@@ -17,80 +19,63 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Homebrew
+      - name: Install build dependencies
         run: |
           brew update
-          brew tap theos/theos
+          brew install make ldid xz perl
 
-      - name: Install Theos dependencies
+      - name: Clone Theos
         run: |
-          brew install make ldid xz
-          # Install Theos
-          git clone --depth=1 https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos-build
-          export THEOS=$GITHUB_WORKSPACE/theos-build
+          git clone --depth=1 --recurse-submodules https://github.com/theos/theos.git "$THEOS"
 
-      - name: Download and setup Theos
+      - name: Download iOS SDK
         run: |
-          export THEOS=$GITHUB_WORKSPACE/theos-build
-          # Download SDKs
-          mkdir -p $THEOS/sdks
-          cd $THEOS/sdks
-          # iOS SDK
-          curl -fsSL https://github.com/theos/sdks/releases/download/sdks/iPhoneOS14.4.sdk.tar.gz -O
-          tar xzf iPhoneOS14.4.sdk.tar.gz
-          rm iPhoneOS14.4.sdk.tar.gz
-
-      - name: Prepare build environment
-        run: |
-          export THEOS=$GITHUB_WORKSPACE/theos-build
-          mkdir -p $GITHUB_WORKSPACE/debs
+          mkdir -p "$THEOS/sdks"
+          cd "$THEOS/sdks"
+          echo "下载 iOS 14.5 SDK..."
+          curl -fsSL https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS14.5.sdk.tar.xz -O
+          tar xzf iPhoneOS14.5.sdk.tar.xz
+          rm iPhoneOS14.5.sdk.tar.xz
+          ls -lh
 
       - name: Build Release Package
         run: |
-          export THEOS=$GITHUB_WORKSPACE/theos-build
-          cd $GITHUB_WORKSPACE
+          export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+          cd "${{ github.workspace }}"
           make clean
-          make package FINALPACKAGE=1 _THEOS_DEB_PACKAGE_CONTROL_PATH=$GITHUB_WORKSPACE/control.release
-          if [ -f .theos/last_package ]; then
-            deb_file=$(<.theos/last_package)
-            [ ! -f "$deb_file" ] && deb_file="$GITHUB_WORKSPACE/$deb_file"
-            [ -f "$deb_file" ] && mv "$deb_file" $GITHUB_WORKSPACE/debs/
-          fi
+          make package FINALPACKAGE=1 _THEOS_DEB_PACKAGE_CONTROL_PATH="${{ github.workspace }}/control.release"
 
       - name: Build Debug Package
         run: |
-          export THEOS=$GITHUB_WORKSPACE/theos-build
-          cd $GITHUB_WORKSPACE
+          export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+          cd "${{ github.workspace }}"
           make clean
-          make package _THEOS_DEB_PACKAGE_CONTROL_PATH=$GITHUB_WORKSPACE/control.debug
-          if [ -f .theos/last_package ]; then
-            deb_file=$(<.theos/last_package)
-            [ ! -f "$deb_file" ] && deb_file="$GITHUB_WORKSPACE/$deb_file"
-            [ -f "$deb_file" ] && mv "$deb_file" $GITHUB_WORKSPACE/debs/
-          fi
+          make package _THEOS_DEB_PACKAGE_CONTROL_PATH="${{ github.workspace }}/control.debug"
 
       - name: List build artifacts
         run: |
-          ls -lh $GITHUB_WORKSPACE/debs/
-          echo "---"
-          echo "构建产物:"
-          find $GITHUB_WORKSPACE/debs -type f -name "*.deb" | while read f; do
-            echo "  $(basename "$f") - $(stat -f%z "$f" | awk '{print $1/1024/1024 "MB"}')"
-          done
+          echo "=== 编译产物列表 ==="
+          if [ -d "${{ github.workspace }}/packages" ]; then
+            ls -lh "${{ github.workspace }}/packages/"
+          else
+            echo "packages 目录不存在"
+            exit 1
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success()
+        if: always()
         with:
           name: autopower-debs
-          path: debs/*.deb
+          path: packages/*.deb
           retention-days: 30
+          if-no-files-found: warn
 
-      - name: Create Release (on tag)
+      - name: Create Release (on tag push)
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && success()
         with:
-          files: debs/*.deb
+          files: packages/*.deb
           draft: false
           prerelease: false
         env:
