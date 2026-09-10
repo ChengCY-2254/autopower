@@ -1,7 +1,7 @@
 THEOS_DEVICE_IP = localhost
 THEOS_DEVICE_PORT = 2222
 THEOS_DEVICE_USER = root
-TARGET := iphone:clang:latest:14.0
+TARGET := iphone:clang:latest:17.0
 ARCHS = arm64e
 INSTALL_TARGET_PROCESSES = SpringBoard
 THEOS_PACKAGE_SCHEME = rootless

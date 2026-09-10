@@ -7,7 +7,6 @@
 
 #import <UIKit/UIKit.h>
 #import <notify.h>
-#import <string.h>
 
 /* 通知只负责触发探测，实际状态由 provider 读取。 */
 static const CFStringRef kLockNotifCandidates[] = {
@@ -40,10 +39,6 @@ static const NSTimeInterval kOffConfirmFirstDelay      = 1.0;   /* 首次复查�
 static const NSTimeInterval kOffConfirmRetryDelayShort = 2.0;   /* attempt 1→2 间隔 */
 static const NSTimeInterval kOffConfirmRetryDelayLong  = 4.0;   /* attempt 2→3 间隔 */
 
-enum {
-    kCalibrateMaxSamples = 6,
-};
-
 /* 亮度方向（采样值区间判定） */
 typedef NS_ENUM(NSInteger, ScreenDir) {
     ScreenDirUnknown = -1,
@@ -60,12 +55,6 @@ typedef NS_ENUM(NSInteger, ScreenDir) {
     /* reset 递增代际，使所有在途异步判定失效。 */
     NSUInteger _resolveGeneration;
 
-    /* notify state 仅观测，不参与判定。 */
-    BOOL _notifyStateUsable;     /* state 可靠反映屏幕亮灭 */
-    BOOL _notifyStateOnIsOne;    /* state==1 表示"亮" */
-    int  _calibrateState[kCalibrateMaxSamples]; /* state 原始值 */
-    BOOL _calibrateOn[kCalibrateMaxSamples];    /* 亮度方向（YES=亮） */
-    int  _calibrateCount;
     BOOL _loggedMissingProvider;
 }
 
@@ -73,18 +62,12 @@ typedef NS_ENUM(NSInteger, ScreenDir) {
     return generation == _resolveGeneration;
 }
 
-/* hasBlankedScreen 的 state 仅作观测，不参与判定：避免把事件子状态当作屏幕状态。 */
-static const BOOL kNotifyStateAutoEnable = NO;
-
 - (instancetype)initWithStateMachine:(APSStateMachine *)stateMachine {
     self = [super init];
     if (self) {
         _sm = stateMachine;
         _notifyToken = 0;
         _resolveGeneration = 0;
-        _notifyStateUsable = NO;
-        _notifyStateOnIsOne = YES;
-        _calibrateCount = 0;
     }
     return self;
 }
@@ -184,51 +167,6 @@ static ScreenDir brightnessDir(CGFloat b) {
     return ScreenDirUnknown;
 }
 
-/* 用亮度方向校准 notify state（由 kNotifyStateAutoEnable 控制）。 */
-- (void)learnNotifyState:(uint64_t)state dir:(ScreenDir)dir {
-    if (!kNotifyStateAutoEnable) return;
-    if (_notifyStateUsable || _calibrateCount >= kCalibrateMaxSamples) return;
-    if (dir == ScreenDirUnknown) return;
-
-    _calibrateState[_calibrateCount] = (int)state;
-    _calibrateOn[_calibrateCount] = (dir == ScreenDirOn);
-    _calibrateCount++;
-
-    BOOL seen0 = NO, seen1 = NO;
-    for (int i = 0; i < _calibrateCount; i++) {
-        if (_calibrateState[i] == 0) seen0 = YES;
-        if (_calibrateState[i] == 1) seen1 = YES;
-    }
-    if (!(seen0 && seen1)) {
-        APSLog(@"notify state calibrating (%d samples so far, state seen 0/1: %d/%d)",
-               _calibrateCount, seen0, seen1);
-        return;
-    }
-
-    /* 样本里同时出现 state==0 与 state==1：对照亮度方向判定映射 */
-    BOOL fwd = YES, rev = YES;
-    for (int i = 0; i < _calibrateCount; i++) {
-        BOOL sOn = (_calibrateState[i] == 1);
-        BOOL bOn = _calibrateOn[i];
-        if (sOn != bOn) fwd = NO;
-        if (sOn == bOn) rev = NO;
-    }
-    if (fwd) {
-        _notifyStateUsable = YES;
-        _notifyStateOnIsOne = YES;
-        APSLog(@"notify state VALID: state==1 => screen ON (confirmed by %d samples)",
-               _calibrateCount);
-    } else if (rev) {
-        _notifyStateUsable = YES;
-        _notifyStateOnIsOne = NO;
-        APSLog(@"notify state VALID: state==1 => screen OFF (confirmed by %d samples)",
-               _calibrateCount);
-    } else {
-        _calibrateCount = kCalibrateMaxSamples; /* 停止校准，固定走亮度 */
-        APSLog(@"notify state INCONSISTENT with brightness, fallback to brightness");
-    }
-}
-
 /* 亮度主判；熄屏时要求 screenIsOn 双确认。复查期间保持 pending。 */
 - (void)finishScreenResolve:(uint64_t)state b0:(CGFloat)b0
                          v1:(CGFloat)v1 v2:(CGFloat)v2 v3:(CGFloat)v3
@@ -250,22 +188,10 @@ static ScreenDir brightnessDir(CGFloat b) {
     id<APSScreenProviding> provider = [APSScreenProviderRegistry current];
     BOOL sbOn = provider ? [provider screenIsOn] : NO;
 
-    ScreenDir dir;
+    ScreenDir dir = brightnessDirResult;
 #ifndef APSLOG_DISABLED
-    NSString *basis;
+    NSString *basis = @"brightness";
 #endif
-    if (kNotifyStateAutoEnable && _notifyStateUsable) {
-        dir = ((state == 1) == _notifyStateOnIsOne) ? ScreenDirOn : ScreenDirOff;
-#ifndef APSLOG_DISABLED
-        basis = @"notify_state";
-#endif
-    } else {
-        dir = brightnessDirResult;
-#ifndef APSLOG_DISABLED
-        basis = @"brightness";
-#endif
-        if (dir != ScreenDirUnknown) [self learnNotifyState:state dir:dir];
-    }
 
     if (dir == ScreenDirUnknown) {
         APSLog(@"screen resolve UNKNOWN (state=%llu b0=%.3f v=[%.3f,%.3f,%.3f]), keep lastTriggerActive",
@@ -355,11 +281,6 @@ static ScreenDir brightnessDir(CGFloat b) {
 
 - (void)reset {
     _resolveGeneration++;
-    _notifyStateUsable = NO;
-    _notifyStateOnIsOne = YES;
-    _calibrateCount = 0;
-    memset(_calibrateState, 0, sizeof(_calibrateState));
-    memset(_calibrateOn, 0, sizeof(_calibrateOn));
 }
 
 @end

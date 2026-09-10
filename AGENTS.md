@@ -166,7 +166,7 @@ Settings 应用或偏好设置 UI 读取配置并刷新界面
 
 **`Makefile`**:
 - 目标平台：iPhone（arm64e 架构）
-- 最低 iOS 版本：14.0
+- 最低 iOS 版本：17.0
 - Hook 目标进程：SpringBoard
 - Tweak 名称：autopower
 - Preferences Bundle：autopowerprefs
@@ -260,6 +260,16 @@ Settings 应用或偏好设置 UI 读取配置并刷新界面
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
 
 - 提交消息使用简体中文
+
+## 变更记录（行为日志）
+
+**每完成一次对 git 跟踪代码的改动，必须在项目根目录的 `CHANGE_LOG.local.md` 追加一条记录。**
+
+- 每条用几句话写清三件事：**改了什么**、**为什么改**、**怎么验证的**。
+- 只陈述最终行为，不写 diff 中已可见的实现细节，也不提未合入的中间状态。
+- 该文件是本地行为日志，已被 `.gitignore` 排除：不提交、不随仓库分发，因此可以直说
+  调试过程、取舍与不确定点。
+- 只读分析、跑实验、仅改文档等不产生代码改动的操作，不需要记录。
 
 ## 注释规范
 
