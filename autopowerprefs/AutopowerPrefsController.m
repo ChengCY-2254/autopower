@@ -104,7 +104,7 @@ static NSString *APSStringFromTable(NSString *key, NSBundle *bundle) {
 - (void)setIdentifier:(NSString *)identifier;
 @end
 
-@interface autopowerprefs : PSListController
+@interface AutopowerPrefsController : PSListController
 @property (nonatomic, strong) NSArray *cachedSpecifiers;
 - (NSArray *)buildSpecifiersFromItems:(NSArray *)items;
 - (id)readPreferenceValue:(PSSpecifier *)specifier;
@@ -123,10 +123,10 @@ static NSString *APSStringFromTable(NSString *key, NSBundle *bundle) {
 @end
 #endif
 
-@implementation autopowerprefs
+@implementation AutopowerPrefsController
 
 + (void)initialize {
-    if (self == [autopowerprefs class]) {
+    if (self == [AutopowerPrefsController class]) {
         prefsLog(@"[AutoPower] prefs controller class initialized, bundle=%@",
                  [NSBundle bundleForClass:self].bundlePath);
     }

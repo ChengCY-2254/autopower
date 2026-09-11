@@ -40,6 +40,7 @@ static const NSTimeInterval kResetResyncDelay = 1.0;
         _screenSource = [[APSScreenInputSource alloc] initWithStateMachine:_sm];
         _lockSource = [[APSLockInputSource alloc] initWithStateMachine:_sm];
         _screenSource.resetDelegate = self;
+        _lockSource.resetDelegate = self;
     }
     return self;
 }

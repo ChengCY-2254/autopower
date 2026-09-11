@@ -103,10 +103,17 @@ typedef NS_ENUM(NSInteger, ScreenDir) {
         APSLog(@"initSbBacklightReader: class MISSING, stay on brightness");
     }
 
-    /* 设置页通知丢失时，在下一次屏幕事件兜底执行重置。 */
+    /* 设置页通知丢失时，在下一次屏幕事件兜底执行重置。
+     * 无论是否执行都必须先消费标志，避免长期残留；已禁用时直接丢弃，
+     * 因为 performReset 会强制关闭低电量，禁用状态下不得越权改动系统状态。 */
     if ([APSConfig resetRequested]) {
-        APSLog(@"RESET: pending flag found, executing");
-        [self.resetDelegate performReset];
+        [APSConfig setResetRequested:NO];
+        if ([APSConfig enabled]) {
+            APSLog(@"RESET: pending flag found, executing");
+            [self.resetDelegate performReset];
+        } else {
+            APSLog(@"RESET: pending flag found but plugin disabled, discarded");
+        }
         return;
     }
 
@@ -242,8 +249,11 @@ static ScreenDir brightnessDir(CGFloat b) {
     }
 
     if ([APSScreenProviderRegistry brightnessOn]) {
-        APSLog(@"screen OFF confirm aborted (screen on during recheck), pending cleared");
+        APSLog(@"screen OFF confirm aborted (screen on during recheck), report screen ON");
         [_sm setResolvePending:NO forSource:APSInputSourceScreen];
+        /* 快速熄屏-亮屏可能让本链以 OFF 收尾而此刻屏幕已亮；必须上报恢复态，
+         * 否则状态机永远不知道屏幕已经回来。 */
+        [_sm handleTriggerActive:NO source:APSInputSourceScreen];
         return;
     }
 
@@ -330,6 +340,20 @@ static void lockNotifyCallback(CFNotificationCenterRef center, void *observer,
 - (void)handleLockNotify:(NSString *)notifName {
     [APSLockProviderRegistry ensureInitialized];
     APSLog(@"lock notify received: %@", notifName);
+
+    /* 与屏幕源一致：设置页通知丢失时在下一次输入事件兜底执行重置。
+     * 重置标志与锁屏 provider 可用性无关，故放在 provider 判断之前；
+     * 已禁用时只消费标志，不执行会强制关闭低电量的 performReset。 */
+    if ([APSConfig resetRequested]) {
+        [APSConfig setResetRequested:NO];
+        if ([APSConfig enabled]) {
+            APSLog(@"RESET: pending flag found (lock notify), executing");
+            [self.resetDelegate performReset];
+        } else {
+            APSLog(@"RESET: pending flag found (lock notify) but plugin disabled, discarded");
+        }
+        return;
+    }
 
     if (![APSLockProviderRegistry current]) {
         APSLog(@"lock notify: reader not usable, no action");

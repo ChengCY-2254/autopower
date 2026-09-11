@@ -10,7 +10,8 @@
 //      插件进程内只读；
 //    - 内部标志（pluginFlagged / resetRequested）：仅主队列读写（与
 //      APSStateMachine 线程模型一致）；持久化仅为跨进程传递（设置页写入
-//      resetRequested 触发一键重置）；
+//      resetRequested 触发一键重置）。两者的持久化 key 分别是 PluginEnabled /
+//      ResetRequested，其中 PluginEnabled 为历史沿用，见 APSConfig.m；
 //    - 内部标志写入自带 synchronize，调用方无需额外同步。
 //
 
@@ -46,7 +47,7 @@ FOUNDATION_EXPORT NSString *const APSResetNotifName;
 + (BOOL)screenOffModeEnabled; /* ScreenOffMode，默认 NO（默认模式为锁屏） */
 + (BOOL)lockedModeEnabled;    /* LockedMode，默认 YES（安装后默认开启） */
 
-/* 内部标志：插件是否认为低电量模式是自己开启的 */
+/* 内部标志：插件是否认为低电量模式是自己开启的（持久化 key 为 PluginEnabled） */
 + (BOOL)pluginFlagged;
 + (void)setPluginFlagged:(BOOL)on;
 

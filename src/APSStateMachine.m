@@ -65,7 +65,8 @@ static APSState APSStateMakeReset(BOOL brightnessOn) {
     return s;
 }
 
-/* 输入源上报触发态事件；决策与副作用分离。 */
+/* 输入源上报触发态事件；决策与副作用分离。
+ * 触发方向按边沿去抖（changed 过滤），恢复方向按状态校正（不过滤）。 */
 static APSDecision APSDecideTriggerActive(APSState *state, APSContext ctx,
                                           BOOL active, APSInputSourceType source) {
     APSInputActive newState = active ? APSInputActiveYes : APSInputActiveNo;
@@ -74,16 +75,24 @@ static APSDecision APSDecideTriggerActive(APSState *state, APSContext ctx,
     BOOL changed = (*last == APSInputActiveUnknown || newState != *last);
     *last = newState;
 
-    if (!changed) return (APSDecision){APSDecisionActionNone, APSDecisionReasonUnchanged};
     if (!ctx.enabled) return (APSDecision){APSDecisionActionNone, APSDecisionReasonDisabled};
     if (source != ctx.mode) return (APSDecision){APSDecisionActionNone, APSDecisionReasonModeMismatch};
 
     if (active) {
+        if (!changed) return (APSDecision){APSDecisionActionNone, APSDecisionReasonUnchanged};
         if (ctx.lowPowerOn) return (APSDecision){APSDecisionActionNone, APSDecisionReasonAlreadyOn};
         return (APSDecision){APSDecisionActionEnableLowPower, APSDecisionReasonTriggered};
     }
 
-    if (!ctx.lowPowerOn) return (APSDecision){APSDecisionActionClearPluginFlag, APSDecisionReasonLowPowerOff};
+    /* 恢复方向是对「屏幕已亮 / 已解锁」的状态校正，而非边沿事件：快速熄屏-亮屏会落在
+     * 去抖窗口内，触发沿可能从未被记录，若仍按 changed 过滤则低电量会永久残留。
+     * 触发方向保留 changed 过滤，避免把用户在触发态下手动关闭的低电量重新打开。 */
+    if (!ctx.lowPowerOn) {
+        if (!changed && !ctx.pluginFlagged) {
+            return (APSDecision){APSDecisionActionNone, APSDecisionReasonUnchanged};
+        }
+        return (APSDecision){APSDecisionActionClearPluginFlag, APSDecisionReasonLowPowerOff};
+    }
     if (ctx.pluginFlagged || !ctx.ignoreUser) {
         return (APSDecision){APSDecisionActionDisableLowPower, APSDecisionReasonRestored};
     }
@@ -203,14 +212,20 @@ static APSDecision APSDecideExternalLowPowerOff(APSContext ctx) {
 - (void)applyDecision:(APSDecision)d ctx:(APSContext)ctx
                active:(BOOL)active source:(APSInputSourceType)source {
     switch (d.action) {
-        case APSDecisionActionEnableLowPower:
-            [[APSLowPowerProviderRegistry current] setLowPowerOn:YES];
-            [APSConfig setPluginFlagged:YES];
+        case APSDecisionActionEnableLowPower: {
+            id<APSLowPowerProviding> provider = [APSLowPowerProviderRegistry current];
+            [provider setLowPowerOn:YES];
+            /* 回读实际终态：setLowPowerOn 失败时不能谎称低电量是插件开启的 */
+            [APSConfig setPluginFlagged:[provider isLowPowerOn]];
             break;
-        case APSDecisionActionDisableLowPower:
-            [[APSLowPowerProviderRegistry current] setLowPowerOn:NO];
-            [APSConfig setPluginFlagged:NO];
+        }
+        case APSDecisionActionDisableLowPower: {
+            id<APSLowPowerProviding> provider = [APSLowPowerProviderRegistry current];
+            [provider setLowPowerOn:NO];
+            /* 关闭失败（仍为开）时保留插件所有权，供下一次恢复事件重试关闭 */
+            [APSConfig setPluginFlagged:[provider isLowPowerOn]];
             break;
+        }
         case APSDecisionActionClearPluginFlag:
             [APSConfig setPluginFlagged:NO];
             break;

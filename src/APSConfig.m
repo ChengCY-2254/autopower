@@ -3,6 +3,9 @@
 NSString *const APSPrefsSuite      = @"io.cheng.autopower";
 NSString *const APSEnabledKey      = @"Enabled";
 NSString *const APSIgnoreUserKey   = @"IgnoreUserLowPower";
+/* key 字面量 "PluginEnabled" 为历史沿用，与常量名 APSPluginFlagKey / API 名
+ * pluginFlagged 不一致；该 key 属内部状态，勿按 key 名新增同名字典项，
+ * 否则会静默改写插件对低电量所有权的判断。 */
 NSString *const APSPluginFlagKey   = @"PluginEnabled";
 NSString *const APSScreenOffModeKey = @"ScreenOffMode";
 NSString *const APSLockedModeKey    = @"LockedMode";

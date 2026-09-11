@@ -63,7 +63,7 @@ AutoPower 是一个 iOS Theos tweak（iOS 18+），用于自动开启低电量�
   - `handleReset()`: 清理所有内部状态
 - 设计思想：
   - **纯函数化决策**：快照全部依赖 → 纯函数决策 → 映射为副作用
-  - **去抖机制**：通过 `lastTriggerActive` 三态记忆（Unknown/No/Yes）实现
+  - **去抖机制**：通过 `lastTriggerActive` 三态记忆（Unknown/No/Yes）实现；触发方向按边沿去抖，恢复方向按状态校正（未观测到触发沿也要纠正残留）
   - **并发安全**：全主队列约定，无需锁
 
 #### 4. **配置层** (`APSConfig`)
@@ -74,7 +74,7 @@ AutoPower 是一个 iOS Theos tweak（iOS 18+），用于自动开启低电量�
   - `ScreenOffMode`: 屏幕熄灭模式开关（默认 NO）
   - `LockedMode`: 设备锁定模式开关（默认 YES）
 - 内部标志（仅主队列读写）：
-  - `PluginFlagged`: 插件是否认为低电量由自己开启
+  - `PluginFlagged`: 插件是否认为低电量由自己开启（持久化 key 为 `PluginEnabled`，历史沿用）
   - `ResetRequested`: 一键重置标记（设置页写入）
 - 配置域：`io.cheng.autopower`
 

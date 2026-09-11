@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>NSPrincipalClass</key>
-	<string>autopowerprefs</string>
+	<string>AutopowerPrefsController</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.3.0</string>
 	<key>CFBundleVersion</key>

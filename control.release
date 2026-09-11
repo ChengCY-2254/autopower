@@ -1,6 +1,6 @@
 Package: run.cheng.autopower
 Name: AutoPower
-Version: 1.3.0
+Version: 1.3.1
 Architecture: iphoneos-arm
 Description: 自动开启低电量模式。
 Maintainer: cheng <autopower@hutao.run>
