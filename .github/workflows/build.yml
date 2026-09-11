@@ -11,6 +11,9 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    # 仓库默认 workflow 权限为 read-only，创建 Release 需要显式提权
+    permissions:
+      contents: write
     env:
       THEOS: ${{ github.workspace }}/theos
     
@@ -73,7 +76,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Create Release (on tag push)
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') && success()
         with:
           files: packages/*.deb
