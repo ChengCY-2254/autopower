@@ -6,5 +6,5 @@ Description: 自动开启低电量模式。
 Maintainer: cheng <autopower@hutao.run>
 Author: cheng <autopower@hutao.run>
 Section: Tweaks
-Depends: mobilesubstrate (>= 0.9.5000), preferenceloader (>= 2.2.3), firmware (>= 17.0)
+Depends: mobilesubstrate (>= 0.9.5000), preferenceloader (>= 2.2.3)
 Conflicts: run.cheng.autopower
