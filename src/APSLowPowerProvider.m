@@ -4,6 +4,7 @@
 
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import <dlfcn.h>
 
 #pragma mark - 私有 API
 
@@ -24,7 +25,10 @@
 + (NSString *)providerName { return @"_PMLowPowerMode"; }
 
 + (BOOL)isAvailable {
-    return objc_getClass("_PMLowPowerMode") != NULL;
+    dlopen("/System/Library/PrivateFrameworks/LowPowerMode.framework/LowPowerMode", RTLD_LAZY);
+    Class cls = objc_getClass("_PMLowPowerMode");
+    return cls && [cls instancesRespondToSelector:@selector(getPowerMode)] &&
+           [cls instancesRespondToSelector:@selector(setPowerMode:fromSource:)];
 }
 
 /* 单例不可用时回退到 alloc/init。 */
@@ -38,7 +42,7 @@
         @selector(instance), @selector(singleton), NULL
     };
     for (int i = 0; singletonSels[i] != NULL; i++) {
-        if (class_respondsToSelector(cls, singletonSels[i])) {
+        if ([(id)cls respondsToSelector:singletonSels[i]]) {
             id maybe = ((id (*)(id, SEL))(void *)objc_msgSend)((id)cls, singletonSels[i]);
             if (maybe && [maybe isKindOfClass:cls]) {
                 instance = maybe;
