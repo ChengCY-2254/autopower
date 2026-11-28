@@ -5,7 +5,7 @@
 ## 兼容性
 
 越狱布局：rootless
-支持的ios版本：ios17、ios18、ios26
+支持的ios版本：ios16、ios17、ios18、ios26
 
 ## 构建
 

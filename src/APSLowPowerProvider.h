@@ -2,7 +2,7 @@
 //  APSLowPowerProvider.h
 //  AutoPower
 //
-// 低电量模式读写能力层：封装 iOS 18 私有 API
+// 低电量模式读写能力层：封装 iOS 16+ 私有 API
 //
 
 #import <Foundation/Foundation.h>
@@ -16,12 +16,12 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSString *)providerName;   /* 诊断 */
 @end
 
-/* _PMLowPowerMode（iOS 18） */
+/* _PMLowPowerMode（iOS 16+） */
 @interface APSPMLowPowerProvider : NSObject <APSLowPowerProviding>
 + (BOOL)isAvailable;
 @end
 
-/* 注册表：惰性解析并缓存 iOS 18 provider */
+/* 注册表：惰性解析并缓存 iOS 16+ provider */
 @interface APSLowPowerProviderRegistry : NSObject
 + (id<APSLowPowerProviding>)current;
 + (NSString *)currentDescription;   /* 诊断：当前生效 provider 名 */
