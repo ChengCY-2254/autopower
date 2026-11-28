@@ -4,7 +4,8 @@
 
 ## 兼容性
 
-ios18没有问题，其它ios版本我在网络上找了许久的SpringBoard头文件，只能确定ios17-ios26有这些api，具体有没有效果我也不知道。
+越狱布局：rootless
+支持的ios版本：ios17、ios18、ios26
 
 ## 构建
 
