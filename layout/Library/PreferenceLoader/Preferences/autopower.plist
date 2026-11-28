@@ -8,10 +8,12 @@
 		<string>PSLinkCell</string>
 		<key>label</key>
 		<string>AutoPower</string>
+		<key>icon</key>
+		<string>icon.png</string>
 		<key>bundle</key>
 		<string>autopowerprefs</string>
-		<key>plistName</key>
-		<string>AutopowerSettings</string>
+		<key>detail</key>
+		<string>AutopowerPrefsController</string>
 		<key>isController</key>
 		<true/>
 	</dict>
